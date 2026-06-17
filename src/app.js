@@ -2,12 +2,15 @@ const express = require("express")
 require("dotenv").config()
 const connectDB = require('./db/db')
 const postRouter = require('./routers/postRouter')
+
 const app = express()
+
 
 const PORT = process.env.PORT
 
 app.use(express.json())
 app.use('/api/posts',postRouter)
+
 
 app.get("/", async(req, res)=>{
 
