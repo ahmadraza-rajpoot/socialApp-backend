@@ -47,4 +47,20 @@ postRouter.post("/", upload.single('image') ,async(req, res)=>{
     }
 })
 
+postRouter.delete("/:id", async (req, res)=>{
+    try{
+    const {id} = req.params
+
+    const result = await Post.findOneAndDelete({_id:id})
+    
+    
+    }catch(error){
+        res.status(400).json({
+            success:false,
+            message:error.message
+        })
+    }
+
+})
+
 module.exports = postRouter
