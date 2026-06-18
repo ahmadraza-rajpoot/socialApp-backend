@@ -51,9 +51,21 @@ postRouter.delete("/:id", async (req, res)=>{
     try{
     const {id} = req.params
 
-    const result = await Post.findOneAndDelete({_id:id})
+    const result = await Post.findOneAndDelete({_id:id}).select("_id")
     
-    
+    if(!result){
+        return res.status(400).json({
+            success:false,
+            message:"Not result found"
+        })
+    }
+
+    res.status(200).json({
+        success:true,
+        message:"post has been deleted",
+        data:result
+    })
+
     }catch(error){
         res.status(400).json({
             success:false,
