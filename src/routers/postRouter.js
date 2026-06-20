@@ -10,7 +10,7 @@ const imageKit = require('../services/imageKit')
 
 postRouter.get("/", async(req, res)=>{
     try{
-        const posts = await Post.find({})
+        const posts = await Post.find({}).lean()
 
         res.status(200).json({
             success:true,
@@ -20,7 +20,7 @@ postRouter.get("/", async(req, res)=>{
     }catch(error){
         res.status(500).json({
             success:false,
-            message:`Something went wrong, Error: ${error.message}`
+            message:"Internal server error."
         })
     }
 
