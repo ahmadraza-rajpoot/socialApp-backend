@@ -9,7 +9,7 @@ const app = express()
 const PORT = process.env.PORT
 
 app.use(express.json())
-app.use('/api/post',postRouter)
+app.use('/api/posts',postRouter)
 
 
 app.get("/", async(req, res)=>{

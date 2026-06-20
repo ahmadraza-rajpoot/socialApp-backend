@@ -8,6 +8,25 @@ const upload = multer({
 const postRouter = express.Router()
 const imageKit = require('../services/imageKit')
 
+postRouter.get("/", async(req, res)=>{
+    try{
+        const posts = await Post.find({})
+
+        res.status(200).json({
+            success:true,
+            data:posts
+        })
+
+    }catch(error){
+        res.status(500).json({
+            success:false,
+            message:`Something went wrong, Error: ${error.message}`
+        })
+    }
+
+})
+
+
 postRouter.post("/", upload.single('image') ,async(req, res)=>{
     try {
         
@@ -56,7 +75,7 @@ postRouter.delete("/:id", async (req, res)=>{
     if(!result){
         return res.status(400).json({
             success:false,
-            message:"Not result found"
+            message:"No result found"
         })
     }
 
