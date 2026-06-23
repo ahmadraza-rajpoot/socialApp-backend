@@ -3,6 +3,7 @@ require("dotenv").config()
 const connectDB = require('./db/db')
 const postRouter = require('./routers/postRouter')
 const userRouter = require("./routers/userRouter")
+const cookieParser = require('cookie-parser')
 
 const app = express()
 
@@ -10,6 +11,7 @@ const app = express()
 const PORT = process.env.PORT
 
 app.use(express.json())
+app.use(cookieParser())
 app.use('/api/posts',postRouter)
 app.use('/api/user', userRouter)
 
