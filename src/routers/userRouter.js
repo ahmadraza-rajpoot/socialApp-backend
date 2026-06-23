@@ -5,7 +5,7 @@ const userRouter = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
-userRouter.post('/', async (req, res)=>{
+userRouter.post('/signup', async (req, res)=>{
     try {
         signUpValidator(req)
 
