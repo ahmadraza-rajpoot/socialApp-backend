@@ -4,6 +4,7 @@ const {validateSignup} = require("../utils/validate")
 const userRouter = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const {auth} = require('../middlewares/auth.js')
 
 // signup api
 userRouter.post("/signup", async(req, res)=>{
@@ -55,18 +56,25 @@ userRouter.post("/login", async(req, res)=>{
         const email = req.body.email?.trim().toLowerCase();
         const password = req.body.password;
 
+        if(!email || !password){
+            return res.status(400).json({
+                success:false,
+                message:"Email and password are required"
+            })
+        }
+
         // find user
         const user = await User.findOne({email}).select("+password")
       
         if(!user){
             return res.status(404).json({
                 success:false,
-                message:"User not found"
+                message:"Invalid credentials"
             })
         }
 
         // compare hash password 
-        const isValid = await bcrypt.compare(password, user.password,)
+        const isValid = await bcrypt.compare(password, user.password)
 
         if(!isValid){
             return res.status(401).json({
@@ -76,8 +84,14 @@ userRouter.post("/login", async(req, res)=>{
         }
 
         // generate token and set it to cookie
-        const token = jwt.sign({_id: user._id}, process.env.JWT_SECRET)
-        res.cookie("token", token)
+        const token = jwt.sign({_id: user._id}, process.env.JWT_SECRET, {expiresIn:"7d"})
+        
+        res.cookie("token", token, {
+            httpOnly:true,
+            secure:true,
+            sameSite:"none",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        })
     
         return res.status(200).json({
             success:true,
@@ -87,7 +101,7 @@ userRouter.post("/login", async(req, res)=>{
     }catch(error){
         console.log(error)
 
-        return res.status(400).json({
+        return res.status(500).json({
             success:false,
             message:"Something went wrong"
         })
@@ -96,54 +110,28 @@ userRouter.post("/login", async(req, res)=>{
 })
 
 // get user profile
-userRouter.get("/", async(req, res)=>{
-    try{
-
-        
-        const {token} = req.cookies
-
-        if(!token){
-            return res.status(401).json({
-                sucess:false,
-                message:"Please logged-in again"
-            })
-        }
-
-        const decodedId = await jwt.verify(token, process.env.JWT_SECRET)
-
-        if(!decodedId){
-            return res.status(401).json({
-                success:false,
-                message:"Invalid or expired token, please login again"
-            })
-        }
-
-        const {_id} = decodedId;
-
-        const user = await User.findById(_id)
-
-        if(!user){
-            return res.status(404).json({
-                success:false,
-                message:"User not found"
-            })
-        }
-
+userRouter.get("/", auth, async (req, res) => {
+    try {
+        const user = req.user;
 
         return res.status(200).json({
-            success:true,
-            data:user
-        })
+            success: true,
+            data: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email
+            }
+        });
 
+    } catch (error) {
+        console.log(error);
 
-    }catch(error){
-        console.log(error)
-
-        return res.status(401).json({
-            success:false,
-            message:"Something went wrong"
-        })
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong"
+        });
     }
-})
+});
 
 module.exports = userRouter;
