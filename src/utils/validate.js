@@ -1,33 +1,15 @@
-const validator = require("validator");
+const validator = require('validator')
 
-function signUpValidator(req) {
-    const { firstName, lastName, email, password } = req.body;
+function validateSignup(firstName, lastName, email, password){
+    
+    if(!firstName) throw new Error("First name is required")
+    if(!lastName) throw new Error("Last name is required")
+    
+    if(!email || !validator.isEmail(email)) throw new Error("Please enter valid emial")
+    if(!password || !validator.isStrongPassword(password)) throw new Error("Please enter strong password")
 
-    if (!firstName?.trim()) {
-        throw new Error("First name is required");
-    }
-
-    if (!lastName?.trim()) {
-        throw new Error("Last name is required");
-    }
-
-    if (!email) {
-        throw new Error("Email is required");
-    }
-
-    if (!validator.isEmail(email)) {
-        throw new Error("Please enter a valid email");
-    }
-
-    if (!password) {
-        throw new Error("Password is required");
-    }
-
-    if (!validator.isStrongPassword(password)) {
-        throw new Error("Password is not strong enough");
-    }
 }
 
 module.exports = {
-    signUpValidator
+    validateSignup
 }

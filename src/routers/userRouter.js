@@ -1,111 +1,149 @@
 const express = require('express')
 const User = require('../models/user.model')
-const {signUpValidator} = require("../utils/validate")
+const {validateSignup} = require("../utils/validate")
 const userRouter = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
-userRouter.post('/signup', async (req, res)=>{
+// signup api
+userRouter.post("/signup", async(req, res)=>{
     try {
-        signUpValidator(req)
+        
+        const firstName = req.body.firstName?.trim()
+        const lastName = req.body.lastName?.trim()
+        const email = req.body.email?.trim().toLowerCase()
+        const password = req.body.password
 
-        const {firstName, lastName, email, password} = req.body
+        //validate data
+        validateSignup(firstName, lastName, email, password)
+
+        // generate has password
+        const hashPassword = await bcrypt.hash(password,10)
+
+        // create user in db
+        const user = await User.create({firstName, lastName, email, password:hashPassword})
         
-        const hasPassword = await bcrypt.hash(password, 10)
-        
-        const user = await User.create({firstName, lastName, email, password:hasPassword})
-        
-        
-        res.status(201).json({
+        // send back response
+        return res.status(201).json({
             success:true,
-            message:"user have been created",
-            data:{firstName:user.firstName, lastName: user.lastName, email:user.email},
+            message:"user has been created",
+            data:{firstName:user.firstName, lastName:user.lastName, email:user.email}
         })
-
     } catch (error) {
-        res.status(500).json(
-            {
+
+        console.error(error)
+
+        if(error?.code == 11000){
+            return res.status(409).json({
                 success:false,
-                message: process.env.NODE_ENV === "development"?error.message:"Something went wrong."
-            }
-        )
+                message:"Email already exists"
+            })
+        }
+
+        return res.status(500).json({
+            success:false,
+            message: "Something went wrong."
+        })
     }
 })
 
-userRouter.post('/login', async (req, res)=>{
-    try {
-        const {email, password} = req.body
+// login api
+userRouter.post("/login", async(req, res)=>{
+    try{
 
+        // extract data
+        const email = req.body.email?.trim().toLowerCase();
+        const password = req.body.password;
+
+        // find user
         const user = await User.findOne({email}).select("+password")
-        
-        if(!user || !(await bcrypt.compare(password, user.password))){
-           return res.status(401).json({
+      
+        if(!user){
+            return res.status(404).json({
+                success:false,
+                message:"User not found"
+            })
+        }
+
+        // compare hash password 
+        const isValid = await bcrypt.compare(password, user.password,)
+
+        if(!isValid){
+            return res.status(401).json({
                 success:false,
                 message:"Invalid credentials"
             })
-        } 
+        }
 
-        
-        const token = jwt.sign({_id:user._id},process.env.JWT_SECRET, {expiresIn:"7d"})
-      
-        res.cookie("token",token,{
-            httpOnly:true,
-            secure:true,
-            sameSite:"none",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        })
-        
-        res.status(200).json({
+        // generate token and set it to cookie
+        const token = jwt.sign({_id: user._id}, process.env.JWT_SECRET)
+        res.cookie("token", token)
+    
+        return res.status(200).json({
             success:true,
-            message:"logged in successfully"
-        })    
-    } catch (error) {
-        res.status(401).json({
+            message:"logged-in successfully"
+        })
+
+    }catch(error){
+        console.log(error)
+
+        return res.status(400).json({
             success:false,
-            message:process.env.NODE_ENV == "development"? error.message:"Something went wrong."
+            message:"Something went wrong"
         })
     }
+
 })
 
-userRouter.get("/", async (req, res)=>{
-    
-    try {
+// get user profile
+userRouter.get("/", async(req, res)=>{
+    try{
+
+        
         const {token} = req.cookies
 
         if(!token){
             return res.status(401).json({
-                success:false,
-                message:'Please login'
+                sucess:false,
+                message:"Please logged-in again"
             })
         }
 
-        const {_id} = jwt.verify(token,process.env.JWT_SECRET)
-        
-        const user = await User.findById(_id).lean()
+        const decodedId = await jwt.verify(token, process.env.JWT_SECRET)
+
+        if(!decodedId){
+            return res.status(401).json({
+                success:false,
+                message:"Invalid or expired token, please login again"
+            })
+        }
+
+        const {_id} = decodedId;
+
+        const user = await User.findById(_id)
 
         if(!user){
             return res.status(404).json({
                 success:false,
-                message:"user not found"
+                message:"User not found"
             })
         }
-        
+
+
         return res.status(200).json({
             success:true,
-            data:user,
-        
+            data:user
         })
 
-    } catch (error) {
-        console.error(error)
-       return res.status(401).json({
-            
+
+    }catch(error){
+        console.log(error)
+
+        return res.status(401).json({
             success:false,
-            message: "Invalid or expired token"
+            message:"Something went wrong"
         })
     }
-
-} )
-
+})
 
 module.exports = userRouter;
