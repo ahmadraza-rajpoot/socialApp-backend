@@ -1,8 +1,9 @@
 const express = require('express')
 const User = require('../models/user.model')
-const {validateSignup} = require("../utils/validate")
+const {validateFields} = require("../utils/validate")
 const userRouter = express.Router()
 const bcrypt = require('bcrypt')
+const validator = require("validator")
 const jwt = require('jsonwebtoken')
 const {auth} = require('../middlewares/auth.js')
 
@@ -16,7 +17,7 @@ userRouter.post("/signup", async(req, res)=>{
         const password = req.body.password
 
         //validate data
-        validateSignup(firstName, lastName, email, password)
+        validateFields(firstName, lastName, email, password)
 
         // generate has password
         const hashPassword = await bcrypt.hash(password,10)
@@ -48,7 +49,7 @@ userRouter.post("/signup", async(req, res)=>{
     }
 })
 
-// login api
+// login 
 userRouter.post("/login", async(req, res)=>{
     try{
 
@@ -134,4 +135,80 @@ userRouter.get("/", auth, async (req, res) => {
     }
 });
 
+//update user profile
+userRouter.patch("/", auth, async(req, res) =>{
+    try {
+
+        const update = {}
+      
+        if(req.body.firstName){
+            const firstName = req.body.firstName.trim()
+            update["firstName"] = firstName
+          
+        }
+
+        if(req.body.lastName){
+            const lastName = req.body.lastName.trim()
+            update["lastName"] = lastName
+       
+        }
+
+        if(req.body.email){
+
+            let email = req.body.email.trim().toLowerCase()
+            if(!validator.isEmail(email)){
+                return res.status(400).json({
+                    success:false,
+                    message:"Please provide valid email address"
+                })
+            }
+            update["email"] = email
+           
+        }
+
+        // if nothing update
+        if(Object.keys(update).length == 0) {
+            return res.status(400).json({success:false,message:"Provide valid field(s) for update"})
+        }
+
+        const {_id} = req.user
+ 
+        const updatedUser = await User.findByIdAndUpdate(_id, update, {runValidators:true, returnDocument:"after"}).select("firstName lastName email")
+
+        if(!updatedUser){
+            return res.status(400).json({
+                success:false,
+                message:"Something went wrong."
+            })
+        }
+
+        return res.status(200).json({
+            success:true,
+            message: `User has been updated`,
+            data:updatedUser
+            
+        })
+
+    } catch (error) {
+        console.log(error)
+
+        if(error.code === 11000){
+            return res.status(409).json({
+                success:false,
+                message:"Email already exists"
+            })
+        }
+
+        return res.status(500).json({
+            success:false,
+            message:"Something went wrong."  
+        })
+    }
+})
+
+/*
+  todo:
+  1) forgot password
+  2) delete user profile
+*/
 module.exports = userRouter;

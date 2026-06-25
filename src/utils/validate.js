@@ -1,6 +1,6 @@
 const validator = require('validator')
 
-function validateSignup(firstName, lastName, email, password){
+function validateFields(firstName, lastName, email, password){
     
     if(!firstName) throw new Error("First name is required")
     if(!lastName) throw new Error("Last name is required")
@@ -11,5 +11,5 @@ function validateSignup(firstName, lastName, email, password){
 }
 
 module.exports = {
-    validateSignup
+    validateFields
 }
