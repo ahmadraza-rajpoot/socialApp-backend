@@ -66,7 +66,7 @@ userRouter.post("/login", async(req, res)=>{
 
         // find user
         const user = await User.findOne({email}).select("+password")
-      
+       
         if(!user){
             return res.status(404).json({
                 success:false,
@@ -75,8 +75,8 @@ userRouter.post("/login", async(req, res)=>{
         }
 
         // compare hash password 
-        const isValid = await bcrypt.compare(password, user.password)
-
+        const isValid = await user.validatePassword(password)
+       
         if(!isValid){
             return res.status(401).json({
                 success:false,
@@ -85,8 +85,8 @@ userRouter.post("/login", async(req, res)=>{
         }
 
         // generate token and set it to cookie
-        const token = jwt.sign({_id: user._id}, process.env.JWT_SECRET, {expiresIn:"7d"})
-        
+        const token = await user.getJWT()
+      
         res.cookie("token", token, {
             httpOnly:true,
             secure:true,
