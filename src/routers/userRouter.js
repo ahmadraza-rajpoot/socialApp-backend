@@ -275,12 +275,26 @@ userRouter.patch("/verify-otp", async(req, res)=>{
             })
         }
 
-        const isValidOtp = await bcrypt.compare(otp, user.resetPasswordOtp)
-        
-        if(!isValidOtp || user.otpExpires < Date.now()){
+        if (!user.resetPasswordOtp) {
+            return res.status(400).json({
+                success: false,
+                message: "No OTP request found. Please request again."
+            });
+        }
+
+        if(user.otpExpires < Date.now()){
             return res.status(400).json({
                 success:false,
-                message:"Either OTP is incorrect or Expired"
+                message:"OTP has been expired, please request new one."
+            })
+        }
+
+        const isValidOtp = await bcrypt.compare(otp, user.resetPasswordOtp)
+        
+        if(!isValidOtp){
+            return res.status(400).json({
+                success:false,
+                message:"OTP is not correct."
             })
         }
 
@@ -317,7 +331,8 @@ userRouter.patch("/verify-otp", async(req, res)=>{
 
 /*
   todo:
-  1) forgot password
+  1) forgot password (implemented, need to improve it)
+  1.2) Implement rate-limit on password forgot system apis
   2) delete user profile
 */
 module.exports = userRouter;
