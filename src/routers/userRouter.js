@@ -6,6 +6,8 @@ const bcrypt = require('bcrypt')
 const validator = require("validator")
 const jwt = require('jsonwebtoken')
 const {auth} = require('../middlewares/auth.js')
+const {randomInt} = require('crypto')
+const {sendMail} = require('../services/sendMail.js')
 
 // signup api
 userRouter.post("/signup", async(req, res)=>{
@@ -202,6 +204,113 @@ userRouter.patch("/", auth, async(req, res) =>{
         return res.status(500).json({
             success:false,
             message:"Something went wrong."  
+        })
+    }
+})
+
+// forgot password
+userRouter.post("/forgot-password", async (req, res)=>{
+
+    try {
+        
+        const {email} = req.body;
+
+        if( !email || !validator.isEmail(email)){
+            return res.status(401).json({
+                success:false,
+                message:"Please enter valid email"
+            })
+        }
+
+        const user = await User.findOne({email})
+
+        if(!user){
+            return res.status(404).json({
+                success:false,
+                message:"User not found"
+            })
+        }
+
+        const otp = randomInt(100000, 1000000);
+      
+        const hashedOTP = await bcrypt.hash(String(otp), 5);
+         
+        user.resetPasswordOtp = hashedOTP;
+        user.otpExpires = Date.now() + 20 * 60 * 1000;
+
+        await user.save()
+        const html = `<h1>Here is your reset password OTP: <strong>${otp}</strong> </h1>`;
+        const subject = "Forget Password Request";
+        
+        await sendMail(email, subject, html);
+
+        req.email = email
+
+        return res.status(200).json({
+            success:true,
+            message:"OTP has been sent"
+        })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            sucess:false,
+            message:"Something went wrong."
+        })
+    }
+
+})
+
+userRouter.patch("/verify-otp", async(req, res)=>{
+    try {
+        const {otp, password, confirmPassword, email} = req.body;
+        
+
+        const user = await User.findOne({email})
+
+        if(!user){
+            return res.status(404).json({
+                success:false,
+                message:"User not found"
+            })
+        }
+
+        const isValidOtp = await bcrypt.compare(otp, user.resetPasswordOtp)
+        
+        if(!isValidOtp || user.otpExpires < Date.now()){
+            return res.status(400).json({
+                success:false,
+                message:"Either OTP is incorrect or Expired"
+            })
+        }
+
+        if(password != confirmPassword){
+            return res.status(400).json(
+                {
+                    success:false,
+                    message:"Password & confirm password are not matched"
+                }
+            )
+        }
+
+        const hashPassword = await bcrypt.hash(password, 10)
+
+        user.password = hashPassword;
+        user.resetPasswordOtp = null;
+        user.otpExpires = null;
+        await user.save()
+
+        return res.status(200).json({
+            success:true,
+            message:"Your password has been changed"
+        })
+
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success:false,
+            message:"Something went wrong."
         })
     }
 })
