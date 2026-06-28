@@ -8,6 +8,29 @@ const jwt = require('jsonwebtoken')
 const {auth} = require('../middlewares/auth.js')
 const {randomInt} = require('crypto')
 const {sendMail} = require('../services/sendMail.js')
+const {rateLimit, ipKeyGenerator} = require('express-rate-limit')
+
+const limiter = rateLimit({
+    windowMs:15 * 60 * 1000,
+    limit:5,
+    standardHeaders: 'draft-8',
+    legacyHeaders:false,
+    ipv6Subnet:56,
+})
+
+const otpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit:3,
+    standardHeaders:"draft-8",
+    legacyHeaders:false,
+    keyGenerator:(req)=>{
+        const email = (req.body?.email || "unknown-email").toLowerCase().trim();
+         const ip = ipKeyGenerator(req.ip);
+        return `${ip}-${email}`
+    },
+    message:"Too many attempts, please try agian later."
+})
+
 
 // signup api
 userRouter.post("/signup", async(req, res)=>{
@@ -209,7 +232,7 @@ userRouter.patch("/", auth, async(req, res) =>{
 })
 
 // forgot password
-userRouter.post("/forgot-password", async (req, res)=>{
+userRouter.post("/forgot-password", limiter, async (req, res)=>{
 
     try {
         
@@ -244,7 +267,6 @@ userRouter.post("/forgot-password", async (req, res)=>{
         
         await sendMail(email, subject, html);
 
-        req.email = email
 
         return res.status(200).json({
             success:true,
@@ -261,7 +283,7 @@ userRouter.post("/forgot-password", async (req, res)=>{
 
 })
 
-userRouter.patch("/verify-otp", async(req, res)=>{
+userRouter.patch("/verify-otp", otpLimiter, async(req, res)=>{
     try {
         const {otp, password, confirmPassword, email} = req.body;
         
@@ -331,8 +353,7 @@ userRouter.patch("/verify-otp", async(req, res)=>{
 
 /*
   todo:
-  1) forgot password (implemented, need to improve it)
-  1.2) Implement rate-limit on password forgot system apis
+  1) forgot password ( need to improve it)
   2) delete user profile
 */
 module.exports = userRouter;
