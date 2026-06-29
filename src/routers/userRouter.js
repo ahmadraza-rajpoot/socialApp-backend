@@ -351,9 +351,38 @@ userRouter.patch("/verify-otp", otpLimiter, async(req, res)=>{
     }
 })
 
+userRouter.delete("/:id", async(req, res)=>{
+    try{
+
+        const {id} = req.params;
+
+        const user = await User.findByIdAndDelete(id)
+
+        if(!user){
+            return res.status(404).json({
+                success:false,
+                message:"Something went wrong. Bad request"
+            })
+        }
+
+        return res.status(200).json({
+            sucess:true,
+            message:`${user.firstName} has been deleted`
+        })
+        
+    }catch(error){
+        console.log(error)
+        return res.status(500).json({
+            success:false,
+            message:"Something went wrong",
+        })
+    }
+})
+
+
 /*
   todo:
-  1) forgot password ( need to improve it)
+  
   2) delete user profile
 */
 module.exports = userRouter;
