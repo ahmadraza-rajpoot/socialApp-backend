@@ -283,6 +283,7 @@ userRouter.post("/forgot-password", limiter, async (req, res)=>{
 
 })
 
+//verify otp and password update
 userRouter.patch("/verify-otp", otpLimiter, async(req, res)=>{
     try {
         const {otp, password, confirmPassword, email} = req.body;
@@ -351,6 +352,7 @@ userRouter.patch("/verify-otp", otpLimiter, async(req, res)=>{
     }
 })
 
+//delete user api by id
 userRouter.delete("/:id", async(req, res)=>{
     try{
 
@@ -382,7 +384,7 @@ userRouter.delete("/:id", async(req, res)=>{
 
 /*
   todo:
+  1) better secure delete api ( need improvement)
   
-  2) delete user profile
 */
 module.exports = userRouter;
