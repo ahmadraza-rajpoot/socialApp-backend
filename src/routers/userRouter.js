@@ -353,12 +353,12 @@ userRouter.patch("/verify-otp", otpLimiter, async(req, res)=>{
 })
 
 //delete user api by id
-userRouter.delete("/:id", async(req, res)=>{
+userRouter.delete("/",auth, async(req, res)=>{
     try{
 
-        const {id} = req.params;
+        const {_id} = req.user
 
-        const user = await User.findByIdAndDelete(id)
+        const user = await User.findByIdAndDelete(_id)
 
         if(!user){
             return res.status(404).json({
@@ -381,10 +381,4 @@ userRouter.delete("/:id", async(req, res)=>{
     }
 })
 
-
-/*
-  todo:
-  1) better secure delete api ( need improvement)
-  
-*/
 module.exports = userRouter;
