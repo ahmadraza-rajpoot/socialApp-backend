@@ -5,10 +5,12 @@ const upload = multer({
     storage:multer.memoryStorage()
 })
 
+const {auth} = require('../middlewares/auth')
+
 const postRouter = express.Router()
 const imageKit = require('../services/imageKit')
 
-postRouter.get("/", async(req, res)=>{
+postRouter.get("/", auth, async(req, res)=>{
     try{
         const posts = await Post.find({}).lean()
 
@@ -26,8 +28,7 @@ postRouter.get("/", async(req, res)=>{
 
 })
 
-
-postRouter.post("/", upload.single('image') ,async(req, res)=>{
+postRouter.post("/", auth, upload.single('image') ,async(req, res)=>{
     try {
         
         let {caption} = req.body
@@ -66,7 +67,7 @@ postRouter.post("/", upload.single('image') ,async(req, res)=>{
     }
 })
 
-postRouter.delete("/:id", async (req, res)=>{
+postRouter.delete("/:id", auth, async (req, res)=>{
     try{
     const {id} = req.params
 
